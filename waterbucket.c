@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include<time.h>
 int manual();
 int automatic();
 int begin();
@@ -8,13 +9,28 @@ int changetemp();
 int change_temp_by_dial();
 int change_temp_by_mobileapp();
 int off();
+int temp_drop();
 int temp;
-int main()
+int manual_sig=0;
+clock_t sec;
+float curr_temp=22;
+
+int temp_drop()
 {
-	
+        sec=clock()-sec;
+        curr_temp-=(sec*0.01)/CLOCKS_PER_SEC;
+        if(curr_temp<22)
+        curr_temp=22;
+        if(curr_temp>100)
+        curr_temp=100;
+        printf("Current water temperature = %f\n",curr_temp);
+    
+}
+int main()
+{	
 	printf("----Electric Water Bucket-----\n");
+    printf("Current water temperature = %f\n",curr_temp);
     begin();
-	
 }
 int begin()
 {
@@ -43,7 +59,7 @@ int changemode()
 {
     int mode;
     printf("Press 1 - for Manual mode\nPress 2 - for Automatic mode\n");
-    printf("press 3 to turned off\n");
+    printf("press 3 to turn off\n");
     scanf("%d",&mode);
     if(mode==1)
     manual();
@@ -61,9 +77,18 @@ int manual()
 {
     int current;
     printf("----Manual mode-----\n");
+    temp_drop();
     printf("Enter the value through dial ranging from 0(No current) to 100(Full current).\n");
     scanf("%d",&current);
+    manual_sig=0;
     manual_dial(current);
+}
+
+int manual_dial_temp_inc(int m_curr)
+{
+    sec=clock()-sec;
+    curr_temp+=(sec*m_curr*0.02)/CLOCKS_PER_SEC;
+    printf("Current set to %d\n", m_curr);
 }
 
 int manual_dial(int current)
@@ -71,16 +96,13 @@ int manual_dial(int current)
     int change;
      if(current>=0 && current<=100){
         do{
-            if(current<20)
-            printf("50 minute will take to heat water till equillibrium at this current.\n");
-            else if(current<40)
-            printf("40 minute will take to heat water till equillibrium at this current.\n");
-            else if(current<60)
-            printf("30 minute will take to heat water till equillibrium at this current.\n");
-            else if(current<80)
-            printf("20 minute will take to heat water till equillibrium at this current.\n");
-            else if(current<=100)
-            printf("10 minute will take to heat water till equillibrium at this current.\n");
+            
+            if(++manual_sig==1)
+            {
+                sec=clock();
+            }
+            manual_dial_temp_inc(current);
+            temp_drop();
             
             printf("\nPress 1 - If u want to change the current value again.\n");
             printf("Press 2 - If u want to change the mode.\n");
@@ -110,20 +132,21 @@ int manual_dial(int current)
     {
         printf("invalid input\n");
         manual();
-
     }
 }
 
 
 int automatic()
 {
-    int choice;
+    int choice,t;
 	printf("----Automatic Mode----\n");
     printf("Enter the temperature from 0 to 100 degree celsius.\n");
-    scanf("%d",&temp);
-    if(temp>=0 && temp<=100)
+    scanf("%d",&t);
+    if(t>=0 && t<=100)
     {
-        printf("Automatic mode is ON and temperature is set to %d degree celsius\n", temp);
+      
+        curr_temp=t;
+        printf("Automatic mode is ON and temperature is set to %f degree celsius\n", curr_temp);
         printf("Press 1 if You want to change the temperature or\n");
         printf("Press 2 if you want to EXIT the Automatic Mode and ENTER in Manual Mode.\n");
         printf("press 3 to turned off\n");
@@ -146,6 +169,7 @@ int automatic()
             automatic();
         }
     }
+    
     else
     {
         printf("Invalid Input\n");
@@ -186,38 +210,38 @@ int changetemp()
 int change_temp_by_dial()
 {
     int choice;
-    printf("Pess 1 to rotate dial clockwise(temperature will increase by 1\n");
-    printf("Pess 2 to rotate dial anticlockwise(temperature will decrease by 1\n");
+    printf("Pess 1 to rotate dial clockwise(temperature will increase by 1)\n");
+    printf("Pess 2 to rotate dial anticlockwise(temperature will decrease by 1)\n");
     printf("Press 3 to set temperature directly by Mobile App or\n");
     printf("Press 4 if you want to EXIT the Automatic Mode and ENTER in Manual Mode\n");
     printf("press 5 to turned off\n");
     scanf("%d",&choice);
      if(choice==1)
     {
-        if(temp>=100)
+        if(curr_temp>=100)
         {
             printf("Temperature is reached to 100 and cannot increase further\n");
             change_temp_by_dial();
         }
         else
         {
-            temp++;
-            printf("Temperature incresed by 1 and set to %d degree celsius\n", temp);
+            curr_temp++;
+            printf("Temperature incresed by 1 and set to %f degree celsius\n", curr_temp);
             change_temp_by_dial();
         }
         
     }
     else if(choice==2)
     {
-        if(temp<=0)
+        if(curr_temp<=0)
         {
             printf("Temperature is reached to 0 and cannot decrease further\n");
             change_temp_by_dial();
         }
         else
         {
-            temp--;
-            printf("Temperature decresed by 1 and set to %d degree celsius\n", temp);
+            curr_temp--;
+            printf("Temperature decresed by 1 and set to %f degree celsius\n", curr_temp);
             change_temp_by_dial();
         }
         
@@ -249,8 +273,8 @@ int change_temp_by_mobileapp()
     scanf("%d",&t);
     if(t>=0 && t<=100)
     {
-        temp=t;
-        printf("Temperature is set to %d\n", temp);
+        curr_temp=t;
+        printf("Temperature is set to %f\n", curr_temp);
         changetemp();
     }
     else
