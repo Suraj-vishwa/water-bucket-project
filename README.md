@@ -20,3 +20,5 @@ int change_temp_by_dial();--this is used to change temperature through dial by r
 int change_temp_by_mobileapp();--this is used to set or clear temperature through Mobile app.
 
 int off();-- use to turned off the device.
+
+int temp_drop();-- This function continue reduces the temperature if temp greater than 22 degree celsius.
