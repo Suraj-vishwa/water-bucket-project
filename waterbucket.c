@@ -1,60 +1,67 @@
 #include <stdio.h>
 #include<time.h>
+#include <pthread.h>
+
 int manual();
 int automatic();
-int begin();
+
 int changemode();
 int manual_dial(int dial);
 int changetemp();
 int change_temp_by_dial();
 int change_temp_by_mobileapp();
-int off();
-int temp_drop();
+
 int temp;
 int manual_sig=0;
 clock_t sec;
 float curr_temp=22;
+int thread_sig=1;
+int target_temp;
+int auto_flag=0;
+int manual_flag=0;
+pthread_t thread_id;
 
-int temp_drop()
+void *real_thread_temp(float *m_curr)
 {
-        sec=clock()-sec;
-        curr_temp-=(sec*0.01)/CLOCKS_PER_SEC;
-        if(curr_temp<22)
+	while(1)
+	{
+			sleep(1);
+			sec=clock()-sec;
+			curr_temp-=(sec*0.002)/CLOCKS_PER_SEC;
+			
+		if(manual_flag==1)
+		{
+			
+    		curr_temp+=(sec*(*m_curr/2)*0.001)/CLOCKS_PER_SEC;
+		}
+		
+    	if(curr_temp<22)
         curr_temp=22;
         if(curr_temp>100)
         curr_temp=100;
-        printf("Current water temperature = %f\n",curr_temp);
-    
+        if(auto_flag==1)
+        {
+        	if(curr_temp<=target_temp)
+        	curr_temp+=(sec*0.003)/CLOCKS_PER_SEC;
+        	if(curr_temp>=target_temp)
+        	curr_temp-=(sec*0.003)/CLOCKS_PER_SEC;
+        	
+			
+		}
+		printf("Your current temperature = %f\r",curr_temp);
+		
+	}
+	
 }
+
 int main()
 {	
 	printf("----Electric Water Bucket-----\n");
     printf("Current water temperature = %f\n",curr_temp);
-    begin();
+   changemode();
 }
-int begin()
-{
-    int start;
-    printf("Press 1 - To start \nPress 2 - To off \n");
-    scanf("%d",&start);
-    if(start==1)
-    {
-        changemode();
-    }
-    else if(start==2)
-    {
-        off();
-    }
-    else{
-        printf("Invalid input\n");
-        begin();
-    }
 
-}
-int off()
-{
-    printf("Electric water bucket Turned Off.\n");
-}
+
 int changemode()
 {
     int mode;
@@ -62,11 +69,25 @@ int changemode()
     printf("press 3 to turn off\n");
     scanf("%d",&mode);
     if(mode==1)
-    manual();
+    {
+    	auto_flag=0;
+    	manual_flag=1;
+    	manual();
+	}
+    
     else if(mode==2)
-    automatic();
+    {
+    	auto_flag=1;
+    	manual_flag=0;
+    	automatic();
+	}
+    
     else if(mode==3)
-    off();
+    {
+    	auto_flag=0;
+    	manual_flag=0;
+    	changemode();
+	}
     else
     {
         printf("invalid input\n");
@@ -77,7 +98,7 @@ int manual()
 {
     int current;
     printf("----Manual mode-----\n");
-    temp_drop();
+
     printf("Enter the value through dial ranging from 0(No current) to 100(Full current).\n");
     scanf("%d",&current);
     manual_sig=0;
@@ -86,24 +107,31 @@ int manual()
 
 int manual_dial_temp_inc(int m_curr)
 {
-    sec=clock()-sec;
-    curr_temp+=(sec*m_curr*0.02)/CLOCKS_PER_SEC;
-    printf("Current set to %d\n", m_curr);
+   // sec=clock()-sec;
+    //curr_temp+=(sec*m_curr*0.02)/CLOCKS_PER_SEC;
+    //printf("Current set to %d\n", m_curr);
 }
 
 int manual_dial(int current)
 {
+	
     int change;
      if(current>=0 && current<=100){
         do{
-            
+            manual_flag=1;
             if(++manual_sig==1)
             {
                 sec=clock();
             }
-            manual_dial_temp_inc(current);
-            temp_drop();
+            //manual_dial_temp_inc(current);
             
+            //if(thread_sig++==1)
+			//{
+				
+				pthread_create(&thread_id, NULL, real_thread_temp, &curr_temp);
+			//}
+				
+			
             printf("\nPress 1 - If u want to change the current value again.\n");
             printf("Press 2 - If u want to change the mode.\n");
             scanf("%d", &change);
@@ -144,9 +172,11 @@ int automatic()
     scanf("%d",&t);
     if(t>=0 && t<=100)
     {
-      
-        curr_temp=t;
-        printf("Automatic mode is ON and temperature is set to %f degree celsius\n", curr_temp);
+      	auto_flag=1;
+        target_temp=t;
+       	pthread_create(&thread_id, NULL, real_thread_temp, &curr_temp);
+
+        
         printf("Press 1 if You want to change the temperature or\n");
         printf("Press 2 if you want to EXIT the Automatic Mode and ENTER in Manual Mode.\n");
         printf("press 3 to turned off\n");
@@ -157,11 +187,14 @@ int automatic()
         }
         else if(choice==2)
         {
+        	auto_flag=0;
             manual();
         }
         else if(choice==3)
         {
-            off();
+            auto_flag=0;
+    		manual_flag=0;
+    		changemode();
         }
         else
         {
@@ -195,11 +228,14 @@ int changetemp()
     }
     else if(choice==3)
     {
+    	auto_flag=0;
         manual();
     }
     else if(choice==4)
     {
-        off();
+        auto_flag=0;
+    	manual_flag=0;
+    	changemode();
     }
     else
     {
@@ -225,7 +261,7 @@ int change_temp_by_dial()
         }
         else
         {
-            curr_temp++;
+            target_temp++;
             printf("Temperature incresed by 1 and set to %f degree celsius\n", curr_temp);
             change_temp_by_dial();
         }
@@ -240,7 +276,7 @@ int change_temp_by_dial()
         }
         else
         {
-            curr_temp--;
+            target_temp--;
             printf("Temperature decresed by 1 and set to %f degree celsius\n", curr_temp);
             change_temp_by_dial();
         }
@@ -252,11 +288,15 @@ int change_temp_by_dial()
     }
     else if(choice==4)
     {
+    	auto_flag=0;
         manual();
     }
     else if(choice==5)
     {
-        off();
+    	
+        auto_flag=0;
+    	manual_flag=0;
+    	changemode();
     }
     else
     {
@@ -273,7 +313,7 @@ int change_temp_by_mobileapp()
     scanf("%d",&t);
     if(t>=0 && t<=100)
     {
-        curr_temp=t;
+        target_temp=t;
         printf("Temperature is set to %f\n", curr_temp);
         changetemp();
     }
@@ -284,7 +324,6 @@ int change_temp_by_mobileapp()
     }
     
 }
-
 
 
 
